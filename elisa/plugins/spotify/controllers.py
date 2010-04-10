@@ -21,7 +21,7 @@ from elisa.core.utils import defer
 from elisa.core.utils.i18n import install_translation
 from elisa.core.common import application
 
-from elisa.plugins.poblesec.base.preview_list import MenuItemPreviewListController
+from elisa.plugins.poblesec.base.preview_list import *
 from elisa.plugins.poblesec.base.list import GenericListViewMode, BaseListController
 from elisa.plugins.poblesec.link import Link, LinksMenuController
 
@@ -102,14 +102,50 @@ class SpotifyPlaylistsController(MenuItemPreviewListController):
     uri = 'spotify://playlists'
 
     def populate_model(self):
-        return defer.succeed(application.resource_manager.get(self.uri))
+        return application.resource_manager.get(self.uri)
 
     def create_actions(self):
         return SpotifyPlaylistAction(self), []
 
 
+class SpotifyTrackViewMode(GenericListViewMode):
+    """
+    Defines how list items are rendered
+    """
+    def get_label(self, item):
+        return defer.succeed(item.name)
+
+    def get_sublabel(self, item):
+        return defer.succeed("%s" % (
+                ','.join([str(a) for a in item.artists]),))
+
+    def get_default_image(self, item):
+        return None
+
+    def get_image(self, item, theme):
+        return defer.succeed(None)
 
 
+class SpotifyPlaylistController(DoubleLineMenuItemPreviewListController):
+    """
+    Controller displaying tracks in a playlist
+    """
+
+    view_mode = SpotifyTrackViewMode
+    item_widget_kwargs = {'with_artwork_box': False}
+    empty_label = _('There are no tracks in this playlist')
+
+    uri = 'spotify://playlist'
+
+    def initialize(self, track_uris):
+        self.track_uris = track_uris
+        return super(SpotifyPlaylistController, self).initialize()
+
+    def populate_model(self):
+        return application.resource_manager.post(self.uri, track_uris=self.track_uris)
+        
+    def create_actions(self):
+        return SpotifyTrackAction(self), []
 
 
 

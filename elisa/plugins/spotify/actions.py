@@ -85,7 +85,27 @@ class SpotifyPlaylistAction(ContextualAction):
     def execute(self, item):
         browser = self.controller.frontend.retrieve_controllers('/poblesec/browser')[0]
         path = '/poblesec/spotify/playlist'
-        dfr = browser.history.append_controller(path, item.name, playlist=item.uri)
+        dfr = browser.history.append_controller(
+            path, 
+            item.name, 
+            track_uris=item.track_uris
+        )
+        dfr.addErrback(stop_animation_on_error, self.controller)
+        return dfr
+
+class SpotifyTrackAction(ContextualAction):
+    """ 
+    L{LinkAction} leading to a Spotify track.
+    """
+
+    def execute(self, item):
+        browser = self.controller.frontend.retrieve_controllers('/poblesec/browser')[0]
+        path = '/poblesec/spotify/track'
+        dfr = browser.history.append_controller(
+            path, 
+            item.name, 
+            track_uris=item.track_uris
+        )
         dfr.addErrback(stop_animation_on_error, self.controller)
         return dfr
 

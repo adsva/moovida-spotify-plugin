@@ -10,7 +10,6 @@ from setuptools import setup, find_packages, Extension
 from elisa.core.utils.dist import find_packages, TrialTest, Clean
 
 packages, package_dir = find_packages(os.path.dirname(__file__))
-print packages, package_dir
 cmdclass = dict(test=TrialTest, clean=Clean)
 
 setup(
@@ -21,7 +20,7 @@ setup(
     license='GPL3',
     author='Adam Svanberg',
     author_email='asvanberg@gmail.com',
-    namespace_packages=['elisa', 'elisa.plugins', 'elisa.plugins.spotify'],
+    namespace_packages=['elisa', 'elisa.plugins', 'elisa.plugins.spotify','elisa.plugins.spotify.pyspotify'],
     packages=packages,
     package_dir=package_dir,
     cmdclass=cmdclass,
@@ -36,6 +35,8 @@ setup(
          'elisa.plugins.spotify.controllers:SpotifyMainController'),
         ('/poblesec/spotify/playlists', 
          'elisa.plugins.spotify.controllers:SpotifyPlaylistsController'),
+        ('/poblesec/spotify/playlist', 
+         'elisa.plugins.spotify.controllers:SpotifyPlaylistController'),
         ('/poblesec/spotify/search', 
          'elisa.plugins.spotify.controllers:SpotifySearchController'),
         
@@ -52,8 +53,12 @@ setup(
         '': ['*.png', '*.conf', '*.pyd', '*.so'],
         },
     data_files = [
-        ('elisa/plugins/spotify/pyspotify', 
-         ['elisa/plugins/spotify/pyspotify/libspotify.so',
-          'elisa/plugins/spotify/pyspotify/_spotify.so']),
+        ('elisa/plugins/spotify/icons', 
+         ['elisa/plugins/spotify/icons/icon1.png',
+          'elisa/plugins/spotify/icons/icon2.png']),
     ],
+    eager_resources = [
+        'elisa/plugins/spotify/pyspotify/libspotify.so',
+    ],
+    zip_safe=True,
 )

@@ -41,6 +41,15 @@ class SpotifyPlaylistModel(Model):
         super(SpotifyPlaylistModel, self).__init__()
         self.name = None
         self.uri = None
-        self.num_songs = None
+        self.track_uris = []
+
+class SpotifyTrackModel(Model):
+
+    def __init__(self):
+        super(SpotifyTrackModel, self).__init__()
+        self.name = None
+        self.album = None
+        self.artists = None        
+        self.uri = None
         
 

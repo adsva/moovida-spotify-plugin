@@ -27,6 +27,8 @@ from elisa.core.components.resource_provider import ResourceProvider
 from elisa.plugins.spotify.models import *
 from elisa.plugins.spotify.spotifyclient import SpotifyClient
 from elisa.plugins.spotify import pyspotify
+from twisted.internet import threads
+from elisa.core.log import Loggable
 
 _ = install_translation('spotify')
 
@@ -36,16 +38,37 @@ class SpotifyResourceProvider(ResourceProvider):
     """
     supported_uri = 'spotify://.*'
 
+    default_config = {'username': '', 'password': ''}
+
+    def __init__(self, *args, **kwargs):
+        Loggable.__init__(self, *args, **kwargs)
+        super(SpotifyResourceProvider, self).__init__(*args, **kwargs)
+        self.debug("spotify resource privoder is now initialized")
+    
     def initialize(self):
-        dfr = super(SpotifyResourceProvider, self).initialize()
         self.client = None
+        username = self.config['username'] or None
+        password = self.config['password'] or None
+        if username and password:
+            self.debug("logging in from initialize")
+            self.login(username, password)
+        dfr = super(SpotifyResourceProvider, self).initialize()
         return dfr
 
     def login(self, username, password):
         """Log in by creating and starting a new spotify client"""
-        self.client = SpotifyClient(username, password)
-        self.client.start()
-        return self.client.login_dfr
+
+        def start_client():
+            self.client = SpotifyClient(username, password)
+            self.client.start()
+            return self.client.login_dfr
+
+        if self.client:
+            dfr = self.logout()
+            dfr.addCallback(start_client)
+            return dfr
+        else:
+            return start_client()
     
     def logout(self):
         """Disconnect the client and return a deferred fired on logout"""
@@ -76,16 +99,35 @@ class SpotifyResourceProvider(ResourceProvider):
         for playlist in self.client.playlists:
             model = SpotifyPlaylistModel()
             model.name=playlist.name()
-            model.uri=pyspotify.Link().from_playlist(playlist)
-            model.num_songs=len(playlist)
+            model.uri=pyspotify.Link.from_playlist(playlist)
+            model.track_uris=[pyspotify.Link.from_track(track, 0) for track in playlist]
             playlists.append(model)
         return playlists
+
+
+    def get_playlist_tracks(self, track_uris):
+        tracks = []
+        for track_uri in track_uris:
+            track = track_uri.as_track()
+            model = SpotifyTrackModel()
+            model.name=track.name()
+            model.artists=track.artists()
+            model.album=track.album()
+            model.uri=track_uri 
+            tracks.append(model)
+        return tracks
+        
         
     def get(self, uri, context_model=None):
         """Handle spotify:// URIs"""
-
         if uri == 'spotify://playlists':
-            return self.get_playlists()
+            return threads.deferToThread(self.get_playlists)
+
+    def post(self, uri, **kwargs):
+        """Handle spotify:// URIs"""
+        if uri == 'spotify://playlist':
+            track_uris = kwargs['track_uris']
+            return threads.deferToThread(self.get_playlist_tracks, track_uris)
 
     
 
