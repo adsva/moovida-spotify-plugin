@@ -23,6 +23,7 @@ from elisa.core.common import application
 
 from elisa.plugins.poblesec.base.preview_list import *
 from elisa.plugins.poblesec.base.list import GenericListViewMode, BaseListController
+from elisa.plugins.poblesec.music_library import TracksViewMode
 from elisa.plugins.poblesec.link import Link, LinksMenuController
 
 from elisa.plugins.poblesec.plugins_settings import GenericSettingsController
@@ -80,8 +81,7 @@ class SpotifyPlaylistViewMode(GenericListViewMode):
     Defines how list items are rendered
     """
     def get_label(self, item):
-        return defer.succeed(item.name)
-
+        return defer.succeed(item.title)
 
     def get_default_image(self, item):
         return None
@@ -108,41 +108,33 @@ class SpotifyPlaylistsController(MenuItemPreviewListController):
         return SpotifyPlaylistAction(self), []
 
 
-class SpotifyTrackViewMode(GenericListViewMode):
+class SpotifyTracksViewMode(TracksViewMode):
     """
     Defines how list items are rendered
     """
-    def get_label(self, item):
-        return defer.succeed(item.name)
 
     def get_sublabel(self, item):
-        return defer.succeed("%s" % (
-                ','.join([str(a) for a in item.artists]),))
-
-    def get_default_image(self, item):
-        return None
-
-    def get_image(self, item, theme):
-        return defer.succeed(None)
+        return defer.succeed(','.join([str(a) for a in item.artists]))
 
 
-class SpotifyPlaylistController(DoubleLineMenuItemPreviewListController):
+
+class SpotifyPlaylistTracksController(DoubleLineMenuItemPreviewListController):
     """
     Controller displaying tracks in a playlist
     """
 
-    view_mode = SpotifyTrackViewMode
+    view_mode = SpotifyTracksViewMode
     item_widget_kwargs = {'with_artwork_box': False}
     empty_label = _('There are no tracks in this playlist')
 
     uri = 'spotify://playlist'
 
-    def initialize(self, track_uris):
-        self.track_uris = track_uris
-        return super(SpotifyPlaylistController, self).initialize()
+    def initialize(self, item):
+        self.playlist_model = item
+        return super(SpotifyPlaylistTracksController, self).initialize()
 
     def populate_model(self):
-        return application.resource_manager.post(self.uri, track_uris=self.track_uris)
+        return defer.succeed(self.playlist_model)
         
     def create_actions(self):
         return SpotifyTrackAction(self), []

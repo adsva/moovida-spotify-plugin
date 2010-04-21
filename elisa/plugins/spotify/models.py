@@ -21,6 +21,7 @@ from elisa.core import common
 from elisa.core.components.model import Model
 
 from elisa.plugins.base.models.audio import ArtistModel, AlbumModel, TrackModel
+from elisa.plugins.base.models.media import PlayableModel, PlaylistModel
 
 from elisa.core.media_uri import MediaUri
 
@@ -35,21 +36,31 @@ _ = install_translation('spotify')
 _poblesec = install_translation('poblesec')
 
 
-class SpotifyPlaylistModel(Model):
+class SpotifyPlaylistModel(PlaylistModel):
 
     def __init__(self):
         super(SpotifyPlaylistModel, self).__init__()
-        self.name = None
+        self.title = None
         self.uri = None
-        self.track_uris = []
+        
+class SpotifyPlayableModel(PlayableModel):
 
-class SpotifyTrackModel(Model):
+    def __init__(self):
+        super(SpotifyPlayableModel, self).__init__()
+
+class SpotifyTrackModel(TrackModel):
 
     def __init__(self):
         super(SpotifyTrackModel, self).__init__()
-        self.name = None
-        self.album = None
-        self.artists = None        
-        self.uri = None
-        
+        self.artists = []
 
+    def get_artists(self):
+        return defer.succeed(self.artists)
+        
+    def get_playable_model(self):
+        model = SpotifyPlayableModel()
+        model.uri = MediaUri('appsrc://')
+        model.title = self.title
+        return defer.succeed(model)
+        
+    

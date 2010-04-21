@@ -36,7 +36,7 @@ setup(
         ('/poblesec/spotify/playlists', 
          'elisa.plugins.spotify.controllers:SpotifyPlaylistsController'),
         ('/poblesec/spotify/playlist', 
-         'elisa.plugins.spotify.controllers:SpotifyPlaylistController'),
+         'elisa.plugins.spotify.controllers:SpotifyPlaylistTracksController'),
         ('/poblesec/spotify/search', 
          'elisa.plugins.spotify.controllers:SpotifySearchController'),
         

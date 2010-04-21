@@ -17,10 +17,12 @@
 # Author: Adam Svanberg <asvanberg@gmail.com>
 
 
+from elisa.core.utils import defer
 from elisa.core.utils.i18n import install_translation
 from elisa.plugins.poblesec.actions import Action, LinkAction
 from elisa.core.action import ContextualAction
 from elisa.plugins.spotify.utils import get_spotify_provider, stop_animation_on_error
+from twisted.internet import threads
 
 _ = install_translation('spotify')
 
@@ -85,11 +87,7 @@ class SpotifyPlaylistAction(ContextualAction):
     def execute(self, item):
         browser = self.controller.frontend.retrieve_controllers('/poblesec/browser')[0]
         path = '/poblesec/spotify/playlist'
-        dfr = browser.history.append_controller(
-            path, 
-            item.name, 
-            track_uris=item.track_uris
-        )
+        dfr = browser.history.append_controller(path, item.title, item=item)
         dfr.addErrback(stop_animation_on_error, self.controller)
         return dfr
 
@@ -99,15 +97,41 @@ class SpotifyTrackAction(ContextualAction):
     """
 
     def execute(self, item):
-        browser = self.controller.frontend.retrieve_controllers('/poblesec/browser')[0]
-        path = '/poblesec/spotify/track'
-        dfr = browser.history.append_controller(
-            path, 
-            item.name, 
-            track_uris=item.track_uris
-        )
-        dfr.addErrback(stop_animation_on_error, self.controller)
+
+        self.controller.debug("SpotifyTrackAction triggered")
+
+        def play_track(model):
+            self.controller.debug("SpotifyTrackAction play_track")
+            play_ctl = self.controller.frontend.retrieve_controllers(
+                '/poblesec/video_player'
+            )[0]
+            
+            resource_provider = get_spotify_provider()
+
+            # When a gst source element is created to handle the
+            # appsrc:// uri this callback sets it up to get data from
+            # the spotify client.
+            play_ctl.player.pipeline.connect(
+                'notify::source', 
+                resource_provider.client.gst_setup_source
+            ) 
+
+            # This callback handles start/stop/pause in the spotify client
+            play_ctl.player.connect(
+                'status-changed', 
+                resource_provider.client.gst_state_changed
+            )
+
+            self.controller.debug("Start playing model via gst")
+            play_ctl.player.play_model(model)
+
+            # Set up the client to feed the track data to gst 
+            self.controller.debug("Load track in spotify client")
+            resource_provider.client.load_track(model.playable_uri)
+
+            main = self.controller.frontend.retrieve_controllers('/poblesec')[0]
+            main.show_video_player()
+
+        dfr = defer.succeed(item)
+        dfr.addCallback(play_track)
         return dfr
-
-
-

@@ -92,42 +92,31 @@ class SpotifyResourceProvider(ResourceProvider):
         """
         Return playlists as model instances.
         
-        Probably no need to defer, since the playlists are initialized
-        on login.
+        TODO: Create the track models when the playlist is loaded
+        instead.
         """
         playlists = []
         for playlist in self.client.playlists:
-            model = SpotifyPlaylistModel()
-            model.name=playlist.name()
-            model.uri=pyspotify.Link.from_playlist(playlist)
-            model.track_uris=[pyspotify.Link.from_track(track, 0) for track in playlist]
-            playlists.append(model)
+            playlist_model = SpotifyPlaylistModel()
+            playlist_model.title = playlist.name()
+            playlist_model.uri = unicode(pyspotify.Link.from_playlist(playlist))
+            for track in playlist:
+                track_model = SpotifyTrackModel()
+                track_model.title = track.name()
+                track_model.artists = map(unicode, track.artists())
+                track_model.artist = ', '.join(track_model.artists)
+                track_model.album = unicode(track.album())
+                track_model.playable_uri = str(pyspotify.Link.from_track(track, 0))
+                playlist_model.append(track_model)
+            playlists.append(playlist_model)
         return playlists
 
 
-    def get_playlist_tracks(self, track_uris):
-        tracks = []
-        for track_uri in track_uris:
-            track = track_uri.as_track()
-            model = SpotifyTrackModel()
-            model.name=track.name()
-            model.artists=track.artists()
-            model.album=track.album()
-            model.uri=track_uri 
-            tracks.append(model)
-        return tracks
-        
-        
     def get(self, uri, context_model=None):
         """Handle spotify:// URIs"""
         if uri == 'spotify://playlists':
             return threads.deferToThread(self.get_playlists)
 
-    def post(self, uri, **kwargs):
-        """Handle spotify:// URIs"""
-        if uri == 'spotify://playlist':
-            track_uris = kwargs['track_uris']
-            return threads.deferToThread(self.get_playlist_tracks, track_uris)
 
     
 
